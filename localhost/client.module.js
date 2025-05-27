@@ -58,7 +58,7 @@ f_add_css(
         right: 0;
         width: 20%;
         height: 100%;
-        background: rgba(255,255,255,0.8);
+        background: rgba(22,22,22,0.8);
         padding: 1rem;
         display: flex;
         flex-direction: column;
@@ -104,10 +104,11 @@ let f_update_canvas = function(){
 
             let a_n_u8_image_data = o_ctx.getImageData(0, 0, o_canvas.width, o_canvas.height).data;
 
-            let n_pixels_x = o_canvas.width/ o_state.n_scl_x_pixel;
-            let n_pixels_y = o_canvas.height / o_state.n_scl_y_pixel;
-            for(let n_x = 0; n_x < n_pixels_x; n_x++){
-                for(let n_y = 0; n_y < n_pixels_y; n_y++){
+            o_state.n_pixels_x = o_canvas.width/ o_state.n_scl_x_pixel;
+            o_state.n_pixels_y = o_canvas.height / o_state.n_scl_y_pixel;
+            a_o_pixel_black = [];
+            for(let n_x = 0; n_x < o_state.n_pixels_x; n_x++){
+                for(let n_y = 0; n_y < o_state.n_pixels_y; n_y++){
                     let n_trn_canvas_pixel_x_start = n_x * o_state.n_scl_x_pixel;
                     let n_trn_canvas_pixel_y_start = n_y * o_state.n_scl_y_pixel;
                     let n_trn_canvas_pixel_x_end = n_trn_canvas_pixel_x_start + o_state.n_scl_x_pixel;
@@ -124,9 +125,15 @@ let f_update_canvas = function(){
                     }
                     let n_avg_pixel = n_sum_pixel / (o_state.n_scl_x_pixel * o_state.n_scl_y_pixel);
                     let n_avg_pixel_normalized = n_avg_pixel / 255; // normalize to 0-1 range
-                    if(n_avg_pixel_normalized < 0.5){
+                    if(n_avg_pixel_normalized < o_state.n_threshhold){
                         o_ctx.fillStyle = `rgba(0, 0, 0, 0.5)`; // darker color for higher values
                         o_ctx2.fillStyle = `rgba(0, 0, 0, 0.5)`; // darker color for higher values
+                        a_o_pixel_black.push(
+                            {
+                                n_x: n_x,
+                                n_y: n_y,
+                            }
+                        )
                     }else{
                         o_ctx.fillStyle = `rgba(0,0,0,0.0)`; // lighter color for lower values
                         o_ctx2.fillStyle = `rgba(0,0,0,0.0)`; // lighter color for lower values
@@ -153,7 +160,7 @@ let f_update_canvas = function(){
                         o_state.n_scl_x_pixel, 
                         o_state.n_scl_y_pixel
                     );
-                    console.log('drawing rect', n_x, n_y, o_state.n_scl_x_pixel, o_state.n_scl_y_pixel)
+                    // console.log('drawing rect', n_x, n_y, o_state.n_scl_x_pixel, o_state.n_scl_y_pixel)
                 }
             }
         };
@@ -191,9 +198,12 @@ let o_div = document;
 let o_blob_stl = null;
 let a_o_license = await(await fetch('https://api.sketchfab.com/v3/licenses')).json()
 let a_o_category = await(await(fetch('https://api.sketchfab.com/v3/categories'))).json()
+let a_o_pixel_black= []; // we dont need a proxy of this large array
 let o_state = f_o_proxified_and_add_listeners(
     {
-        
+        n_threshhold: 0.5,
+        n_pixels_x: 0,
+        n_pixels_y: 0,
         n_ms_timeout_update_canvas: 1000,
         n_id_timeout_update_canvas: null,
         b_mouse_down: false, 
@@ -274,6 +284,21 @@ let o = await f_o_html_from_o_js(
                                 }
                             },
                             {
+                                s_tag: "label", 
+                                innerText: "threshhold ",
+                            },
+                            {
+                                s_tag: "input", 
+                                type: "number", 
+                                step: 0.01,
+                                min: 0,
+                                max: 1,
+                                a_s_prop_sync: 'n_threshhold',
+                                oninput: ()=>{
+                                    f_update_canvas_timeout();
+                                }
+                            },
+                            {
                                 s_tag: "input",
                                 type: 'file',
                                 accept: 'image/*',
@@ -292,6 +317,31 @@ let o = await f_o_html_from_o_js(
                                     }
                                 }
                             }, 
+                            {
+                                s_tag: "button",
+                                innerText: 'export json',
+                                onclick: async function(o_event){
+                                    let o_json = {
+                                        // n_scl_x_pixel: o_state.n_scl_x_pixel,
+                                        // n_scl_y_pixel: o_state.n_scl_y_pixel,
+                                        // s_dataurl_image: o_state.s_dataurl_image,
+                                        n_pixels_x: o_state.n_pixels_x,
+                                        n_pixels_y: o_state.n_pixels_y,
+                                        a_o_pixel_black: a_o_pixel_black,
+                                    }
+                                    let s_json = JSON.stringify(o_json, null, 4);
+                                    let o_blob = new Blob([s_json], {type: 'application/json'});
+                                    let o_url = URL.createObjectURL(o_blob);
+                                    let o_a = document.createElement('a');
+                                    o_a.href = o_url;
+                                    o_a.download = 'cross_stitch_pattern.json';
+                                    document.body.appendChild(o_a);
+                                    o_a.click();
+                                    document.body.removeChild(o_a);
+                                    URL.revokeObjectURL(o_url);
+                                }
+
+                            }
                         ]
                     }
                 },
