@@ -307,7 +307,7 @@ let o = await f_o_html_from_o_js(
                                 s_tag: "input", 
                                 type: "number", 
                                 a_s_prop_sync: 'n_scl_x_pixel',
-                                step: 0.5,
+                                step: 0.1,
                                 oninput: ()=>{
                                     f_update_canvas_timeout();
                                 }
@@ -317,7 +317,7 @@ let o = await f_o_html_from_o_js(
                                 innerText: "Scale Y in pixel: ",
                             },
                             {
-                                step: 0.5,
+                                step: 0.1,
                                 s_tag: "input", 
                                 type: "number", 
                                 a_s_prop_sync: 'n_scl_y_pixel',
