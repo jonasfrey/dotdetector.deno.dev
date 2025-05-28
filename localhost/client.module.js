@@ -91,40 +91,54 @@ let f_update_canvas = function(){
     // put url image to canvas 
     let o_ctx = o_canvas.getContext('2d');
     let o_ctx2 = o_canvas2.getContext('2d');
-    o_ctx2.fillStyle = `rgba(255,255,255,1.0)`;
-    o_ctx2.fillRect(0,0, o_canvas.width, o_canvas.height);
+
     if(o_state.s_dataurl_image != ''){
         let o_img = new Image();
         o_img.onload = function() {
             o_canvas.width = o_img.width;
             o_canvas.height = o_img.height;
-            o_canvas2.width = o_img.width;
-            o_canvas2.height = o_img.height;
+
+
+
+            
             o_ctx.drawImage(o_img, 0, 0);
 
             let a_n_u8_image_data = o_ctx.getImageData(0, 0, o_canvas.width, o_canvas.height).data;
 
-            o_state.n_pixels_x = o_canvas.width/ o_state.n_scl_x_pixel;
-            o_state.n_pixels_y = o_canvas.height / o_state.n_scl_y_pixel;
+
+            o_state.n_pixels_x = Math.ceil(o_state.n_scl_x_crop / o_state.n_scl_x_pixel);
+            o_state.n_pixels_y = Math.ceil(o_state.n_scl_y_crop / o_state.n_scl_y_pixel);
+            o_canvas2.width = o_state.n_pixels_x;
+            o_canvas2.height = o_state.n_pixels_y;
+            o_ctx2.fillStyle = `rgba(255,255,255,1.0)`;
+            o_ctx2.fillRect(0,0, o_canvas2.width, o_canvas2.height);
+
             a_o_pixel_black = [];
             for(let n_x = 0; n_x < o_state.n_pixels_x; n_x++){
                 for(let n_y = 0; n_y < o_state.n_pixels_y; n_y++){
-                    let n_trn_canvas_pixel_x_start = n_x * o_state.n_scl_x_pixel;
-                    let n_trn_canvas_pixel_y_start = n_y * o_state.n_scl_y_pixel;
-                    let n_trn_canvas_pixel_x_end = n_trn_canvas_pixel_x_start + o_state.n_scl_x_pixel;
-                    let n_trn_canvas_pixel_y_end = n_trn_canvas_pixel_y_start + o_state.n_scl_y_pixel;
+                    console.log('looping')
+                    let n_trn_canvas_pixel_x_start =  o_state.n_trn_x_crop + n_x * o_state.n_scl_x_pixel;
+                    let n_trn_canvas_pixel_y_start =  o_state.n_trn_y_crop + n_y * o_state.n_scl_y_pixel;
+                    let n_trn_canvas_pixel_x_end =  n_trn_canvas_pixel_x_start + o_state.n_scl_x_pixel;
+                    let n_trn_canvas_pixel_y_end =  n_trn_canvas_pixel_y_start + o_state.n_scl_y_pixel;
                     let n_sum_pixel = 0;
-                    for(let n_trn_canvas_pixel_x = n_trn_canvas_pixel_x_start; n_trn_canvas_pixel_x < n_trn_canvas_pixel_x_end; n_trn_canvas_pixel_x++){
-                        for(let n_trn_canvas_pixel_y = n_trn_canvas_pixel_y_start; n_trn_canvas_pixel_y < n_trn_canvas_pixel_y_end; n_trn_canvas_pixel_y++){
-                            let n_value_red = a_n_u8_image_data[(n_trn_canvas_pixel_y * o_canvas.width + n_trn_canvas_pixel_x) * 4 + 0];
-                            let n_value_green = a_n_u8_image_data[(n_trn_canvas_pixel_y * o_canvas.width + n_trn_canvas_pixel_x) * 4 + 1];
-                            let n_value_blue = a_n_u8_image_data[(n_trn_canvas_pixel_y * o_canvas.width + n_trn_canvas_pixel_x) * 4 + 2];
-                            let n_value_alpha = a_n_u8_image_data[(n_trn_canvas_pixel_y * o_canvas.width + n_trn_canvas_pixel_x) * 4 + 3];
-                            n_sum_pixel += (n_value_red + n_value_green + n_value_blue) / 3; // average color value
-                        }
+                    let n_count_pixel = 0;
+                    // Get the pixel data
+                    const a_n_u8_image_data_pixel = o_ctx.getImageData(
+                        n_trn_canvas_pixel_x_start,
+                        n_trn_canvas_pixel_y_start,
+                        parseInt(o_state.n_scl_x_pixel),
+                        parseInt(o_state.n_scl_y_pixel),
+                    ).data;
+                    // Calculate sum of all R, G, B, A values
+                    let n_sum = 0;
+                    for (let i = 0; i < a_n_u8_image_data_pixel.length; i++) {
+                        n_sum += a_n_u8_image_data_pixel[i];
                     }
-                    let n_avg_pixel = n_sum_pixel / (o_state.n_scl_x_pixel * o_state.n_scl_y_pixel);
+                    // Calculate average (each pixel has 4 values: R, G, B, A)
+                    const n_avg_pixel = n_sum / a_n_u8_image_data_pixel.length;
                     let n_avg_pixel_normalized = n_avg_pixel / 255; // normalize to 0-1 range
+
                     if(n_avg_pixel_normalized < o_state.n_threshhold){
                         o_ctx.fillStyle = `rgba(0, 0, 0, 0.5)`; // darker color for higher values
                         o_ctx2.fillStyle = `rgba(0, 0, 0, 0.5)`; // darker color for higher values
@@ -141,28 +155,38 @@ let f_update_canvas = function(){
 
                     o_ctx.strokeStyle = `rgba(255,0,0,0.5)`;
                     o_ctx.strokeRect(
-                        n_x * o_state.n_scl_x_pixel, 
-                        n_y * o_state.n_scl_y_pixel, 
+                        n_trn_canvas_pixel_x_start, 
+                        n_trn_canvas_pixel_y_start, 
                         o_state.n_scl_x_pixel, 
                         o_state.n_scl_y_pixel
                     );
 
                     o_ctx.fillRect(
-                        n_x * o_state.n_scl_x_pixel, 
-                        n_y * o_state.n_scl_y_pixel, 
+                        n_trn_canvas_pixel_x_start, 
+                        n_trn_canvas_pixel_y_start, 
                         o_state.n_scl_x_pixel, 
                         o_state.n_scl_y_pixel
                     );
 
                     o_ctx2.fillRect(
-                        n_x * o_state.n_scl_x_pixel, 
-                        n_y * o_state.n_scl_y_pixel, 
-                        o_state.n_scl_x_pixel, 
-                        o_state.n_scl_y_pixel
+                        n_x, 
+                        n_y, 
+                        1, 
+                        1
                     );
                     // console.log('drawing rect', n_x, n_y, o_state.n_scl_x_pixel, o_state.n_scl_y_pixel)
                 }
             }
+
+            // o_ctx.strokeStyle = 'rgba(0,255,0,0.5)';
+            // o_ctx.strokeRect(
+            //     o_state.n_trn_x_crop, 
+            //     o_state.n_trn_y_crop, 
+            //     o_state.n_scl_x_crop, 
+            //     o_state.n_scl_y_crop
+            // );
+
+
         };
         o_img.src = o_state.s_dataurl_image;
 
@@ -201,12 +225,20 @@ let a_o_category = await(await(fetch('https://api.sketchfab.com/v3/categories'))
 let a_o_pixel_black= []; // we dont need a proxy of this large array
 let o_state = f_o_proxified_and_add_listeners(
     {
+        n_pixel_mouse_x_rel_to_canvas: 0, 
+        n_pixel_mouse_y_rel_to_canvas: 0,
+        n_scl_x_crop: 0, 
+        n_scl_y_crop: 0,
+        n_trn_x_crop: 0,
+        n_trn_y_crop: 0,
         n_threshhold: 0.5,
         n_pixels_x: 0,
         n_pixels_y: 0,
         n_ms_timeout_update_canvas: 1000,
         n_id_timeout_update_canvas: null,
-        b_mouse_down: false, 
+        b_mouse_down_left:false,
+        b_mouse_down_middle:false,
+        b_mouse_down_right:false,
         n_trn_x_mouse_down: 0,
         n_trn_y_mouse_down: 0,
         n_trn_x_mouse_move: 0,
@@ -260,6 +292,14 @@ let o = await f_o_html_from_o_js(
                     f_a_o: ()=>{
                         return [
                             {
+                                s_tag: 'label', 
+                                innerText:  `
+                                left click and drag: crop the image
+                                middle click: move the crop, 
+                                right click: reset the crop
+                                `
+                            },
+                            {
                                 s_tag: "label", 
                                 innerText: "Scale X in pixel: ",
                             },
@@ -267,6 +307,7 @@ let o = await f_o_html_from_o_js(
                                 s_tag: "input", 
                                 type: "number", 
                                 a_s_prop_sync: 'n_scl_x_pixel',
+                                step: 0.5,
                                 oninput: ()=>{
                                     f_update_canvas_timeout();
                                 }
@@ -276,6 +317,7 @@ let o = await f_o_html_from_o_js(
                                 innerText: "Scale Y in pixel: ",
                             },
                             {
+                                step: 0.5,
                                 s_tag: "input", 
                                 type: "number", 
                                 a_s_prop_sync: 'n_scl_y_pixel',
@@ -299,6 +341,57 @@ let o = await f_o_html_from_o_js(
                                 }
                             },
                             {
+                                s_tag: "label", 
+                                innerText: "n_scl_x_crop",
+                            },
+                            {
+                                s_tag: "input", 
+                                type: "number", 
+                                a_s_prop_sync: 'n_scl_x_crop',
+                                oninput: ()=>{
+                                    f_update_canvas_timeout();
+                                }
+                            },
+                            {
+                                s_tag: "label", 
+                                innerText: "n_scl_y_crop",
+                            },
+                            {
+                                s_tag: "input", 
+                                type: "number", 
+                                a_s_prop_sync: 'n_scl_y_crop',
+                                oninput: ()=>{
+                                    f_update_canvas_timeout();
+                                }
+                            },
+                            {
+                                s_tag: "label", 
+                                innerText: "n_trn_x_crop",
+                            },
+                            {
+                                s_tag: "input", 
+                                type: "number", 
+                                a_s_prop_sync: 'n_trn_x_crop',
+                                oninput: ()=>{
+                                    f_update_canvas_timeout();
+                                }
+                            },
+                            {
+                                s_tag: "label", 
+                                innerText: "n_trn_y_crop",
+                            },
+                            {
+                                s_tag: "input", 
+                                type: "number", 
+                                a_s_prop_sync: 'n_trn_y_crop',
+                                oninput: ()=>{
+                                    f_update_canvas_timeout();
+                                }
+                            },
+                        
+
+     
+                            {
                                 s_tag: "input",
                                 type: 'file',
                                 accept: 'image/*',
@@ -311,7 +404,17 @@ let o = await f_o_html_from_o_js(
                                             let s_dataurl_image = e.target.result;
                                             console.log(s_dataurl_image)
                                             o_state.s_dataurl_image = s_dataurl_image;
-                                            f_update_canvas_timeout();
+
+                                            let o_img = new Image();
+                                            o_img.onload = function() {
+    
+                                                o_state.n_scl_x_crop = o_img.width;
+                                                o_state.n_scl_y_crop = o_img.height;
+                                                o_state.n_trn_x_crop = 0;
+                                                o_state.n_trn_y_crop = 0;
+                                                f_update_canvas_timeout();
+                                            };
+                                            o_img.src = o_state.s_dataurl_image;
                                         };
                                         o_reader.readAsDataURL(o_file);
                                     }
@@ -360,21 +463,7 @@ let o = await f_o_html_from_o_js(
                         ].join(';')
                     },
                     f_s_src: ()=>{return o_state.s_dataurl_image},
-                    // onmousedown:(o_event)=>{
-                    //     o_state.b_mouse_down = true;
-                    //     o_state.n_trn_x_mouse_down = o_event.clientX;
-                    //     o_state.n_trn_y_mouse_down = o_event.clientY;
-                    // }, 
-
-                    // onmousemove: (o_event)=>{
-                    //     if(o_state.b_mouse_down){
-                    //         console.log('onmousemove called')
-                    //         o_state.n_trn_x_mouse_move = o_event.clientX;
-                    //         o_state.n_trn_y_mouse_move = o_event.clientY;
-                    //     }
-                    //     o_state.n_scl_x_pixel = Math.abs(o_state.n_trn_x_mouse_move - o_state.n_trn_x_mouse_down);
-                    //     o_state.n_scl_y_pixel = Math.abs(o_state.n_trn_y_mouse_move - o_state.n_trn_y_mouse_down);
-                    // },
+                    
                 }, 
                 {
                     a_s_prop_sync: ['n_trn_x_mouse_move', 'n_trn_y_mouse_move'],
@@ -393,16 +482,119 @@ let o = await f_o_html_from_o_js(
                     }
                 }, 
                 {
+                    
                     class: "canvasses",
+                    style: "position:relative",
                     f_a_o: ()=>{
                         return [
                             {
                                 s_tag: "canvas", 
                                 id: 'canvas',
+                                oncontextmenu: (e)=>{
+                                    e.preventDefault();
+                                },
+                                onmousedown:(o_event)=>{
+                                    // Get the canvas element
+                                    let canvas = o_event.target;
+
+                                        // Check which mouse button was pressed
+                                    if(o_event.button == 0){o_state.b_mouse_down_left = true;} 
+                                    if(o_event.button == 1){o_state.b_mouse_down_middle = true;} 
+                                    if(o_event.button == 2){o_state.b_mouse_down_right = true;} 
+                                    if(o_state.b_mouse_down_right){
+                                        o_state.n_trn_x_crop = 0; 
+                                        o_state.n_trn_y_crop = 0;
+                                        o_state.n_scl_x_crop = canvas.width; 
+                                        o_state.n_scl_y_crop = canvas.height; 
+                                        f_update_canvas();
+                                        return;
+                                    }
+
+                                    // Get the position of the canvas relative to the viewport
+                                    let rect = canvas.getBoundingClientRect();
+                                    
+                                    // Calculate the mouse position relative to the canvas
+                                    let n_pixel_mouse_x_rel_to_canvas = o_event.clientX - rect.left;
+                                    let n_pixel_mouse_y_rel_to_canvas = o_event.clientY - rect.top;
+                                    o_state.n_trn_x_crop = n_pixel_mouse_x_rel_to_canvas
+                                    o_state.n_trn_y_crop = n_pixel_mouse_y_rel_to_canvas
+                                }, 
+                                onmousemove: (o_event)=>{
+                                    // Get the canvas element
+                                    let canvas = o_event.target;
+                                    
+                                    // Get the position of the canvas relative to the viewport
+                                    let rect = canvas.getBoundingClientRect();
+                                    // Calculate the mouse position relative to the canvas
+                                    o_state.n_pixel_mouse_x_rel_to_canvas = o_event.clientX - rect.left;
+                                    o_state.n_pixel_mouse_y_rel_to_canvas = o_event.clientY - rect.top;
+                                    if(o_state.b_mouse_down_left){
+                                        o_state.n_scl_x_crop = Math.abs(o_state.n_trn_x_crop-o_state.n_pixel_mouse_x_rel_to_canvas)
+                                        o_state.n_scl_y_crop = Math.abs(o_state.n_trn_y_crop-o_state.n_pixel_mouse_y_rel_to_canvas)
+                                    }
+                                    if(o_state.b_mouse_down_middle){
+                                        o_state.n_trn_x_crop = o_state.n_pixel_mouse_x_rel_to_canvas
+                                        o_state.n_trn_y_crop = o_state.n_pixel_mouse_y_rel_to_canvas
+                                    }
+                                    
+                                },
                             }, 
                             {
                                 s_tag: "canvas", 
+                                style: "min-width: 100px; image-rendering: pixelated;",
                                 id: 'canvas2',
+                            }, 
+                            {
+                                class: 'canvas_crop', 
+                                a_s_prop_sync: [
+                                    'n_trn_x_crop',
+                                    'n_trn_y_crop',
+                                    'n_scl_x_crop',
+                                    'n_scl_y_crop',
+                                ],
+                                f_s_style: ()=>{
+                                    return [
+                                        `left: ${o_state.n_trn_x_crop}px`,
+                                        `top: ${o_state.n_trn_y_crop}px`,
+                                        `width: ${o_state.n_scl_x_crop}px`,
+                                        `height: ${o_state.n_scl_y_crop}px`,
+                                        `position:absolute`, 
+                                        `border: 2px solid green`, 
+                                        'pointer-events: none'
+                                    ].join(';')
+                                }
+                            }, 
+                            {
+                                a_s_prop_sync: [
+                                    'n_pixel_mouse_y_rel_to_canvas',
+                                ],
+                                f_s_style: ()=>{
+                                    return [
+                                        `left: 0`,
+                                        `top: ${o_state.n_pixel_mouse_y_rel_to_canvas}px`,
+                                        `width: 100%`,
+                                        `height: 1px`,
+                                        `position:absolute`, 
+                                        `background: rgba(0,0,255,0.8)`, 
+                                        'pointer-events: none'
+                                    ].join(';')
+                                }
+                            },
+                            {
+                                a_s_prop_sync: [
+                                    'n_pixel_mouse_x_rel_to_canvas',
+                                ],
+                                f_s_style: ()=>{
+                                    return [
+                                        `top: 0`,
+                                        `left: ${o_state.n_pixel_mouse_x_rel_to_canvas}px`,
+                                        `height: 100%`,
+                                        `width: 1px`,
+                                        `position:absolute`, 
+                                        `background: rgba(0,0,255,0.8)`, 
+                                        'pointer-events: none'
+                                    ].join(';')
+                                }
                             }
                         ]
                     }
@@ -415,8 +607,9 @@ let o = await f_o_html_from_o_js(
 )
 
 window.onmouseup = function(o_event){
-    o_state.b_mouse_down = false;
-    f_update_canvas_timeout()
-
+    if(o_event.button == 0){o_state.b_mouse_down_left = false;} 
+    if(o_event.button == 1){o_state.b_mouse_down_middle = false;} 
+    if(o_event.button == 2){o_state.b_mouse_down_right = false;} 
+    f_update_canvas();
 }
 document.body.appendChild(o);
